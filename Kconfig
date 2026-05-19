@@ -1,0 +1,2 @@
+config ZMK_BOARD_COMPAT
+	bool
