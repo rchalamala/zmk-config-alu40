@@ -1,6 +1,44 @@
 name: Build ZMK firmware
 on: [push, pull_request, workflow_dispatch]
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Build firmware
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          docker build --tag alu40-firmware .
+          docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,exec \
+            --env PYTHONDONTWRITEBYTECODE=1 --entrypoint python3 \
+            alu40-firmware -m unittest discover -s /config/tests -v
+          mkdir -p firmware
+          docker run --rm --network none \
+            --env SOURCE_REVISION \
+            --env SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
+            --volume "$PWD/firmware:/output" \
+            alu40-firmware
+      - name: Archive firmware
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: firmware
+          path: firmware
+          if-no-files-found: error
+          include-hidden-files: true
+      - name: Archive failed build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: firmware-diagnostics
+          path: firmware/diagnostics
+          if-no-files-found: ignore
+          include-hidden-files: true
