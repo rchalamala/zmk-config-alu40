@@ -64,7 +64,7 @@ def build(output):
     diagnostics = output / "diagnostics"
     diagnostics.mkdir(parents=True, exist_ok=True)
     shutil.copytree(SOURCE / "config", WORKSPACE / "config", dirs_exist_ok=True)
-    shutil.copy2(SOURCE / "config/west.yml", diagnostics / "west-manifest.yml")
+    shutil.copyfile(SOURCE / "config/west.yml", diagnostics / "west-manifest.yml")
     with (diagnostics / "west-active-manifest.yml").open("w") as destination:
         run(["west", "manifest", "--freeze", "--active-only"], stdout=destination)
     sources = {

@@ -63,7 +63,16 @@ class BuildContractTests(unittest.TestCase):
             env=self.environment,
             capture_output=True,
             text=True,
+            umask=0o022,
         )
+
+    def test_private_manifest_produces_readable_diagnostic(self):
+        manifest = self.source / "config/west.yml"
+        manifest.chmod(0o600)
+        self.invoke("--output", str(self.output))
+        diagnostic = self.output / "diagnostics/west-manifest.yml"
+        self.assertEqual(diagnostic.read_bytes(), manifest.read_bytes())
+        self.assertEqual(diagnostic.stat().st_mode & 0o777, 0o644)
 
     def test_compile_failure_attempts_other_targets_and_withholds_bundle(self):
         result = self.invoke("--output", str(self.output))
